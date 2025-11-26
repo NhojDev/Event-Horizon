@@ -1,5 +1,8 @@
 mod physics;
+mod sim_config;
+
 use physics::{Body, simulate_step};
+use sim_config::SimConfig;
 
 use ggez::conf::WindowMode;
 use ggez::{
@@ -37,27 +40,17 @@ impl Camera {
 struct GameState {
     bodies: Vec<Body>,
     camera: Camera,
+    config: SimConfig,
 }
 
 impl GameState {
     pub fn new() -> Self {
-        let mut bodies = Vec::new();
-
-        // Spawn random particles
-        for _ in 0..300 {
-            bodies.push(Body {
-                pos: Vec2::new(
-                    rand::random::<f32>() * 800.0 - 400.0,
-                    rand::random::<f32>() * 600.0 - 300.0,
-                ),
-                vel: Vec2::ZERO,
-                mass: 1.0,
-            });
-        }
+        let config = SimConfig::default();
 
         Self {
-            bodies,
+            bodies: config.spawn_bodies(),
             camera: Camera::new(),
+            config,
         }
     }
 }
@@ -68,28 +61,24 @@ impl GameState {
 impl event::EventHandler for GameState {
     // UPDATE
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        simulate_step(&mut self.bodies, 0.01, 1.0);
+        simulate_step(&mut self.bodies, self.config.dt, self.config.g);
         Ok(())
     }
 
-    // DRAW
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
 
         for b in &self.bodies {
-            // convert world → camera → screen
+            // World → camera → screen
             let cam_pos = self.camera.apply(b.pos);
 
             let screen_pos = [cam_pos.x + 400.0, cam_pos.y + 300.0];
 
-            let circle = Mesh::new_circle(
-                ctx,
-                DrawMode::fill(),
-                screen_pos,
-                3.0 * self.camera.zoom.recip(), // keep size visually constant
-                0.1,
-                Color::WHITE,
-            )?;
+            // Radius NOT affected by zoom
+            let radius = b.radius * self.camera.zoom.recip();
+
+            let circle =
+                Mesh::new_circle(ctx, DrawMode::fill(), screen_pos, radius, 0.1, Color::RED)?;
 
             canvas.draw(&circle, Vec2::ZERO);
         }
