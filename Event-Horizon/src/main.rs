@@ -13,6 +13,7 @@ use ggez::{
     input::keyboard::KeyInput,
 };
 
+
 // ---------------------------
 // CAMERA
 // ---------------------------
@@ -41,16 +42,40 @@ struct GameState {
     bodies: Vec<Body>,
     camera: Camera,
     config: SimConfig,
+    player_id: usize, // <--- new
 }
 
 impl GameState {
     pub fn new() -> Self {
         let config = SimConfig::default();
 
+        // -----------------------------------------
+        // Spawn regular particles
+        // -----------------------------------------
+        let mut bodies = config.spawn_bodies();
+
+        // -----------------------------------------
+        // Add Player as a physics body
+        // -----------------------------------------
+        let player_body = Body {
+            pos: Vec2::new(0.0, 0.0),
+            vel: Vec2::ZERO,
+            mass: 15.0,  
+            radius: 4.0, 
+        };
+
+        // Save the index so we can control/draw it later
+        let player_id = bodies.len();
+        bodies.push(player_body);
+
+        // -----------------------------------------
+        // Return GameState
+        // -----------------------------------------
         Self {
-            bodies: config.spawn_bodies(),
+            bodies,
             camera: Camera::new(),
             config,
+            player_id,
         }
     }
 }
@@ -68,13 +93,13 @@ impl event::EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
 
+        // --------------------------------
+        // Draw all bodies
+        // --------------------------------
         for b in &self.bodies {
-            // World → camera → screen
             let cam_pos = self.camera.apply(b.pos);
-
             let screen_pos = [cam_pos.x + 400.0, cam_pos.y + 300.0];
 
-            // Radius NOT affected by zoom
             let radius = b.radius * self.camera.zoom.recip();
 
             let circle =
@@ -83,6 +108,23 @@ impl event::EventHandler for GameState {
             canvas.draw(&circle, Vec2::ZERO);
         }
 
+        // --------------------------------
+        // Draw Player (this is the correct spot)
+        // --------------------------------
+        let player = &self.bodies[self.player_id];
+        let p = self.camera.apply(player.pos);
+
+        let screen_p = [p.x + 400.0, p.y + 300.0];
+        let pr = player.radius * self.camera.zoom.recip();
+
+        let player_circle =
+            Mesh::new_circle(ctx, DrawMode::fill(), screen_p, pr, 0.1, Color::GREEN)?;
+
+        canvas.draw(&player_circle, Vec2::ZERO);
+
+        // --------------------------------
+        // Finish frame
+        // --------------------------------
         canvas.finish(ctx)?;
         Ok(())
     }
@@ -102,22 +144,17 @@ impl event::EventHandler for GameState {
         Ok(())
     }
 
-    fn key_down_event(&mut self, _ctx: &mut Context, input: KeyInput, _repeat: bool) -> GameResult {
-        let pan_speed = 20.0 / self.camera.zoom;
+    fn key_down_event(&mut self, ctx: &mut Context, input: KeyInput, _repeat: bool) -> GameResult {
+        let dt = ctx.time.delta().as_secs_f32();
+
+        let player = &mut self.bodies[self.player_id];
+        let thrust = 200.0 * dt;
 
         match input.keycode {
-            Some(KeyCode::W) => {
-                self.camera.offset.y += pan_speed;
-            }
-            Some(KeyCode::S) => {
-                self.camera.offset.y -= pan_speed;
-            }
-            Some(KeyCode::A) => {
-                self.camera.offset.x += pan_speed;
-            }
-            Some(KeyCode::D) => {
-                self.camera.offset.x -= pan_speed;
-            }
+            Some(KeyCode::W) => player.vel.y -= thrust,
+            Some(KeyCode::S) => player.vel.y += thrust,
+            Some(KeyCode::A) => player.vel.x -= thrust,
+            Some(KeyCode::D) => player.vel.x += thrust,
             _ => {}
         }
 
