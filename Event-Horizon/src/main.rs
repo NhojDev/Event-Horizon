@@ -13,7 +13,6 @@ use ggez::{
     input::keyboard::KeyInput,
 };
 
-
 // ---------------------------
 // CAMERA
 // ---------------------------
@@ -60,8 +59,9 @@ impl GameState {
         let player_body = Body {
             pos: Vec2::new(0.0, 0.0),
             vel: Vec2::ZERO,
-            mass: 15.0,  
-            radius: 4.0, 
+            mass: 15.0,
+            radius: 4.0,
+            gravity: 0.0,
         };
 
         // Save the index so we can control/draw it later
@@ -86,10 +86,48 @@ impl GameState {
 impl event::EventHandler for GameState {
     // UPDATE
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        simulate_step(&mut self.bodies, self.config.dt, self.config.g);
+        simulate_step(&mut self.bodies, self.config.dt);
+
+        let p = &mut self.bodies[self.player_id];
+
+        let half_w = 400.0;
+        let half_h = 300.0;
+
+        let left = -half_w;
+        let right = half_w;
+        let top = -half_h;
+        let bottom = half_h;
+
+        // LEFT WALL
+        if p.pos.x - p.radius < left {
+            p.pos.x = left + p.radius;
+            p.vel.x = 0.0;  
+
+        }
+
+        // RIGHT WALL
+        if p.pos.x + p.radius > right {
+            p.pos.x = right - p.radius;
+            p.vel.x = 0.0;  
+
+        }
+
+        // TOP WALL
+        if p.pos.y - p.radius < top {
+            p.pos.y = top + p.radius;
+            p.vel.y = 0.0;  
+
+        }
+
+        // BOTTOM WALL
+        if p.pos.y + p.radius > bottom {
+            p.pos.y = bottom - p.radius;
+            p.vel.y = 0.0;  
+
+        }
+
         Ok(())
     }
-
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
 
@@ -109,7 +147,7 @@ impl event::EventHandler for GameState {
         }
 
         // --------------------------------
-        // Draw Player (this is the correct spot)
+        // Draw Player 
         // --------------------------------
         let player = &self.bodies[self.player_id];
         let p = self.camera.apply(player.pos);
@@ -147,15 +185,38 @@ impl event::EventHandler for GameState {
     fn key_down_event(&mut self, ctx: &mut Context, input: KeyInput, _repeat: bool) -> GameResult {
         let dt = ctx.time.delta().as_secs_f32();
 
+        // Get player body
         let player = &mut self.bodies[self.player_id];
-        let thrust = 200.0 * dt;
+
+        // -------------------------------------
+        // Smooth acceleration (no sharp turns)
+        // -------------------------------------
+        let accel_strength = 120.0 * dt;
+        let mut accel = Vec2::ZERO;
 
         match input.keycode {
-            Some(KeyCode::W) => player.vel.y -= thrust,
-            Some(KeyCode::S) => player.vel.y += thrust,
-            Some(KeyCode::A) => player.vel.x -= thrust,
-            Some(KeyCode::D) => player.vel.x += thrust,
+            Some(KeyCode::W) => accel.y -= 1.0,
+            Some(KeyCode::S) => accel.y += 1.0,
+            Some(KeyCode::A) => accel.x -= 1.0,
+            Some(KeyCode::D) => accel.x += 1.0,
             _ => {}
+        }
+
+        // Normalize diagonal input
+        if accel.length_squared() > 0.0 {
+            accel = accel.normalize() * accel_strength;
+        }
+
+        // Apply acceleration to velocity
+        player.vel += accel;
+
+        // -------------------------------------
+        // SPEED CAP
+        // -------------------------------------
+        let max_speed = 10.0;
+        let speed = player.vel.length();
+        if speed > max_speed {
+            player.vel = player.vel.normalize() * max_speed;
         }
 
         Ok(())
@@ -166,7 +227,7 @@ impl event::EventHandler for GameState {
 // MAIN
 // ---------------------------
 fn main() -> GameResult {
-    let (ctx, event_loop) = ContextBuilder::new("nbody_ggez", "you")
+    let (ctx, event_loop) = ContextBuilder::new("event-horizon", "johpham")
         .window_mode(WindowMode::default().dimensions(800.0, 600.0))
         .build()?;
 

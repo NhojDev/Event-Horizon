@@ -6,9 +6,10 @@ pub struct Body {
     pub vel: Vec2,
     pub mass: f32,
     pub radius: f32,
+    pub gravity: f32,
 }
 
-pub fn simulate_step(bodies: &mut [Body], dt: f32, g: f32) {
+pub fn simulate_step(bodies: &mut [Body], dt: f32) {
     let n = bodies.len();
     let mut acc = vec![Vec2::ZERO; n];
 
@@ -22,7 +23,12 @@ pub fn simulate_step(bodies: &mut [Body], dt: f32, g: f32) {
             let dist_sq = dir.length_squared() + softening * softening;
             let dist = dist_sq.sqrt();
 
-            let force_mag = g * bodies[i].mass * bodies[j].mass / dist_sq;
+            let g_i = bodies[i].gravity;
+            let g_j = bodies[j].gravity;
+            let g_effective = (g_i + g_j) * 0.5;
+
+            let force_mag = g_effective * bodies[i].mass * bodies[j].mass / dist_sq;
+
             let force = (dir / dist) * force_mag;
 
             acc[i] += force / bodies[i].mass;
