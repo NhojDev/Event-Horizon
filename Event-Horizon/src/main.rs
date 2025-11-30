@@ -101,29 +101,25 @@ impl event::EventHandler for GameState {
         // LEFT WALL
         if p.pos.x - p.radius < left {
             p.pos.x = left + p.radius;
-            p.vel.x = 0.0;  
-
+            p.vel.x = 0.0;
         }
 
         // RIGHT WALL
         if p.pos.x + p.radius > right {
             p.pos.x = right - p.radius;
-            p.vel.x = 0.0;  
-
+            p.vel.x = 0.0;
         }
 
         // TOP WALL
         if p.pos.y - p.radius < top {
             p.pos.y = top + p.radius;
-            p.vel.y = 0.0;  
-
+            p.vel.y = 0.0;
         }
 
         // BOTTOM WALL
         if p.pos.y + p.radius > bottom {
             p.pos.y = bottom - p.radius;
-            p.vel.y = 0.0;  
-
+            p.vel.y = 0.0;
         }
 
         Ok(())
@@ -147,7 +143,7 @@ impl event::EventHandler for GameState {
         }
 
         // --------------------------------
-        // Draw Player 
+        // Draw Player
         // --------------------------------
         let player = &self.bodies[self.player_id];
         let p = self.camera.apply(player.pos);
