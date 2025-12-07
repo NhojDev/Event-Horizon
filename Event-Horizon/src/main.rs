@@ -1,7 +1,9 @@
 mod physics;
+mod player;
 mod sim_config;
 
 use physics::{Body, simulate_step};
+use player::Player;
 use sim_config::SimConfig;
 
 use ggez::conf::WindowMode;
@@ -41,7 +43,7 @@ struct GameState {
     bodies: Vec<Body>,
     camera: Camera,
     config: SimConfig,
-    player_id: usize, // <--- new
+    player: Player,
 }
 
 impl GameState {
@@ -54,18 +56,12 @@ impl GameState {
         let mut bodies = config.spawn_bodies();
 
         // -----------------------------------------
-        // Add Player as a physics body
+        // Add Player as a physics body (from Player module)
         // -----------------------------------------
-        let player_body = Body {
-            pos: Vec2::new(0.0, 0.0),
-            vel: Vec2::ZERO,
-            mass: 15.0,
-            radius: 4.0,
-            gravity: 0.0,
-        };
+        let (mut player, player_body) = Player::new(Vec2::new(0.0, 0.0));
 
-        // Save the index so we can control/draw it later
-        let player_id = bodies.len();
+        // Assign real ID
+        player.id = bodies.len();
         bodies.push(player_body);
 
         // -----------------------------------------
@@ -75,7 +71,7 @@ impl GameState {
             bodies,
             camera: Camera::new(),
             config,
-            player_id,
+            player,
         }
     }
 }
@@ -88,16 +84,15 @@ impl event::EventHandler for GameState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         simulate_step(&mut self.bodies, self.config.dt);
 
-        let p = &mut self.bodies[self.player_id];
+        let p = &mut self.bodies[self.player.id];
 
-        let half_w = 400.0;
-        let half_h = 300.0;
+        let half_w = self.config.map_width * 0.5;
+        let half_h = self.config.map_height * 0.5;
 
         let left = -half_w;
         let right = half_w;
         let top = -half_h;
         let bottom = half_h;
-
         // LEFT WALL
         if p.pos.x - p.radius < left {
             p.pos.x = left + p.radius;
@@ -121,7 +116,8 @@ impl event::EventHandler for GameState {
             p.pos.y = bottom - p.radius;
             p.vel.y = 0.0;
         }
-
+        let player = &self.bodies[self.player.id];
+        self.camera.offset = -player.pos;
         Ok(())
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
@@ -145,7 +141,7 @@ impl event::EventHandler for GameState {
         // --------------------------------
         // Draw Player
         // --------------------------------
-        let player = &self.bodies[self.player_id];
+        let player = &self.bodies[self.player.id];
         let p = self.camera.apply(player.pos);
 
         let screen_p = [p.x + 400.0, p.y + 300.0];
@@ -182,7 +178,7 @@ impl event::EventHandler for GameState {
         let dt = ctx.time.delta().as_secs_f32();
 
         // Get player body
-        let player = &mut self.bodies[self.player_id];
+        let player = &mut self.bodies[self.player.id];
 
         // -------------------------------------
         // Smooth acceleration (no sharp turns)

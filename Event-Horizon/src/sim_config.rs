@@ -6,8 +6,8 @@ pub struct SimConfig {
     pub particle_count: usize,
     pub dt: f32,
 
-    pub min_mass: f32, 
-    pub max_mass: f32, 
+    pub min_mass: f32,
+    pub max_mass: f32,
     pub base_radius: f32,
 
     pub spawn_width: f32,
@@ -15,6 +15,9 @@ pub struct SimConfig {
 
     pub min_gravity: f32,
     pub max_gravity: f32,
+
+    pub map_width: f32,
+    pub map_height: f32,
 }
 impl SimConfig {
     pub fn default() -> Self {
@@ -22,15 +25,18 @@ impl SimConfig {
             particle_count: 300,
             dt: 0.5,
 
-            min_mass: 5.0,
-            max_mass: 50.0,
-            base_radius: 0.1,
+            min_mass: 0.5,
+            max_mass: 5.0,
+            base_radius: 1.0,
 
-            spawn_width: 800.0,
-            spawn_height: 600.0,
+            spawn_width: 3200.0,
+            spawn_height: 1800.0,
 
             min_gravity: 0.05,
             max_gravity: 0.5,
+
+            map_width: 3200.0,
+            map_height: 1800.0,
         }
     }
     /// Spawns a list of randomized bodies
@@ -38,12 +44,11 @@ impl SimConfig {
         let mut bodies = Vec::with_capacity(self.particle_count);
 
         for _ in 0..self.particle_count {
-            // random gravity
-            let gravity =
-                rand::random::<f32>() * (self.max_gravity - self.min_gravity) + self.min_gravity;
-
             // random mass
             let mass = rand::random::<f32>() * (self.max_mass - self.min_mass) + self.min_mass;
+
+            // random gravity
+            let gravity = rand::random::<f32>() * (self.max_gravity - self.min_gravity) * mass;
 
             // radius scales with mass
             let radius = mass * self.base_radius;
