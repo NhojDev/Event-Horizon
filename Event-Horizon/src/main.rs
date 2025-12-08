@@ -12,7 +12,7 @@ use ggez::conf::WindowMode;
 use ggez::{
     Context, ContextBuilder, GameResult, event,
     glam::Vec2,
-    graphics::{self, Color, DrawMode, Mesh},
+    graphics::{self, Color, DrawMode, Mesh, PxScale, Text, TextFragment},
     input::keyboard::KeyInput,
 };
 
@@ -85,6 +85,58 @@ impl event::EventHandler for GameState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         simulate_step(&mut self.bodies, self.config.dt);
 
+        // ------------------------------------------------------
+        // PLAYER EATS PARTICLES ON COLLISION
+        // ------------------------------------------------------
+        // First: detect collisions
+        let player_id = self.player.id;
+        let player_pos = self.bodies[player_id].pos;
+        let player_radius = self.bodies[player_id].radius;
+
+        let mut eaten_indices: Vec<usize> = Vec::new();
+
+        for (i, b) in self.bodies.iter().enumerate() {
+            if i == player_id {
+                continue;
+            }
+
+            let dist = b.pos.distance(player_pos);
+            if dist < (player_radius + b.radius) {
+                eaten_indices.push(i);
+            }
+        }
+
+        // ================================
+        // Second: safely remove them
+        // ================================
+        let mut new_player_id = player_id;
+
+        for &i in eaten_indices.iter().rev() {
+            let eaten_mass = self.bodies[i].mass;
+
+            // Increase player stats
+            {
+                let player_body = &mut self.bodies[new_player_id];
+                self.player.absorb(player_body, eaten_mass);
+            }
+
+            let last = self.bodies.len() - 1;
+
+            if i == last {
+                self.bodies.pop();
+                continue;
+            }
+
+            self.bodies.swap_remove(i);
+
+            if new_player_id == last {
+                new_player_id = i;
+            }
+        }
+
+        // Write back corrected player index
+        self.player.id = new_player_id;
+
         let p = &mut self.bodies[self.player.id];
 
         let half_w = self.config.map_width * 0.5;
@@ -152,6 +204,20 @@ impl event::EventHandler for GameState {
             Mesh::new_circle(ctx, DrawMode::fill(), screen_p, pr, 0.1, Color::GREEN)?;
 
         canvas.draw(&player_circle, Vec2::ZERO);
+
+        // --------------------------------
+        // UI - Player Mass + Goal
+        // --------------------------------
+
+        let mut mass_text = Text::new(TextFragment {
+            text: format!("Mass: {:.2}", player.mass),
+            scale: Some(PxScale::from(24.0)), // font size
+            color: Some(Color::WHITE),
+            ..Default::default()
+        });
+
+        // Draw UI in top-left corner of screen
+        canvas.draw(&mass_text, Vec2::new(10.0, 10.0));
 
         // --------------------------------
         // Finish frame

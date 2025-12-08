@@ -25,7 +25,7 @@ impl Controls {
     pub fn handle_player_movement(ctx: &mut Context, key: KeyInput, player_body: &mut Body) {
         let dt = ctx.time.delta().as_secs_f32();
 
-        let accel_strength = 120.0 * dt;
+        let accel_strength = 50.0 * dt;
         let mut accel = Vec2::ZERO;
 
         match key.keycode {
