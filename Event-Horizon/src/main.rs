@@ -1,7 +1,9 @@
+mod controls;
 mod physics;
 mod player;
 mod sim_config;
 
+use controls::Controls;
 use physics::{Body, simulate_step};
 use player::Player;
 use sim_config::SimConfig;
@@ -11,7 +13,6 @@ use ggez::{
     Context, ContextBuilder, GameResult, event,
     glam::Vec2,
     graphics::{self, Color, DrawMode, Mesh},
-    input::keyboard::KeyCode,
     input::keyboard::KeyInput,
 };
 
@@ -58,7 +59,7 @@ impl GameState {
         // -----------------------------------------
         // Add Player as a physics body (from Player module)
         // -----------------------------------------
-        let (mut player, player_body) = Player::new(Vec2::new(0.0, 0.0));
+        let (mut player, player_body) = Player::new();
 
         // Assign real ID
         player.id = bodies.len();
@@ -161,55 +162,14 @@ impl event::EventHandler for GameState {
 
     // ZOOM with mouse wheel
     fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        let speed = 0.12;
-
-        if y > 0.0 {
-            self.camera.zoom *= 1.0 + speed;
-        } else if y < 0.0 {
-            self.camera.zoom *= 1.0 - speed;
-        }
-
-        self.camera.zoom = self.camera.zoom.clamp(0.1, 6.0);
-
+        Controls::handle_zoom(&mut self.camera, y);
         Ok(())
     }
 
     fn key_down_event(&mut self, ctx: &mut Context, input: KeyInput, _repeat: bool) -> GameResult {
-        let dt = ctx.time.delta().as_secs_f32();
+        let player_body = &mut self.bodies[self.player.id];
 
-        // Get player body
-        let player = &mut self.bodies[self.player.id];
-
-        // -------------------------------------
-        // Smooth acceleration (no sharp turns)
-        // -------------------------------------
-        let accel_strength = 120.0 * dt;
-        let mut accel = Vec2::ZERO;
-
-        match input.keycode {
-            Some(KeyCode::W) => accel.y -= 1.0,
-            Some(KeyCode::S) => accel.y += 1.0,
-            Some(KeyCode::A) => accel.x -= 1.0,
-            Some(KeyCode::D) => accel.x += 1.0,
-            _ => {}
-        }
-
-        // Normalize diagonal input
-        if accel.length_squared() > 0.0 {
-            accel = accel.normalize() * accel_strength;
-        }
-
-        // Apply acceleration to velocity
-        player.vel += accel;
-
-        // -------------------------------------
-        // SPEED CAP
-        // -------------------------------------
-        let max_speed = 10.0;
-        let speed = player.vel.length();
-        if speed > max_speed {
-            player.vel = player.vel.normalize() * max_speed;
-        }
+        Controls::handle_player_movement(ctx, input, player_body);
 
         Ok(())
     }
