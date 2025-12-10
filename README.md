@@ -1,7 +1,7 @@
 # Event Horizon
 
 ## Overview
-**Event Horizon** is an **n-body simulation game** where you control a **tiny black hole** eating other particles to increase mass. The goal is to consume surrounding masses and other players to grow larger and stronger. Similar to games like *Slither.io* and *Agar.io*.
+**Event Horizon** is an **n-body simulation game** where you control a **tiny black hole** eating other particles to increase mass. The goal is to absorb surrounding masses to grow bigger. Similar to games like *Slither.io* and *Agar.io*.
 
 Gameplay includes:
 - **Player movement** via WASD controls  
@@ -21,9 +21,12 @@ If on Linux, install the required dev packages with the following command before
 apt install libasound2-dev libudev-dev pkg-config
 ```
 
-## Lessons Learned
-- **WASD Movement:**  
-  Movement controls was the hardest to implement/tweak. Using WASD isn't really smooth and I wish I had more knowledge be able to make it more seamless.
+## Issues Encountered during Development
+- **Using the Particular Crate**  
+  Initially the project was going to be implemented using the Particular crate, but it had a lot of performance and combabilties issues to that idea was scrapped halfway during development.
+
+- **Initial Physics issues**  
+  When switching over to the new O(n^2) physics algorthim, I had to change some of the logic to include padding and softening so the particles won't cause a physics explosion when crash into each other.
 
 
 ## Author
