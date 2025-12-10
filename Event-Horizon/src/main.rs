@@ -45,6 +45,7 @@ struct GameState {
     camera: Camera,
     config: SimConfig,
     player: Player,
+    game_over: bool,
 }
 
 impl GameState {
@@ -73,6 +74,7 @@ impl GameState {
             camera: Camera::new(),
             config,
             player,
+            game_over: false,
         }
     }
 }
@@ -81,8 +83,11 @@ impl GameState {
 // EVENT HANDLER
 // ---------------------------
 impl event::EventHandler for GameState {
-    // UPDATE
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        if self.bodies.len() <= 1 {
+            self.game_over = true;
+        }
+
         simulate_step(&mut self.bodies, self.config.dt);
 
         // ------------------------------------------------------
@@ -106,9 +111,9 @@ impl event::EventHandler for GameState {
             }
         }
 
-        // ================================
+        // ---------------------------
         // Second: safely remove them
-        // ================================
+        // ---------------------------
         let mut new_player_id = player_id;
 
         for &i in eaten_indices.iter().rev() {
@@ -134,7 +139,6 @@ impl event::EventHandler for GameState {
             }
         }
 
-        // Write back corrected player index
         self.player.id = new_player_id;
 
         let p = &mut self.bodies[self.player.id];
@@ -176,6 +180,24 @@ impl event::EventHandler for GameState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::BLACK);
 
+        if self.game_over {
+            let msg = Text::new(TextFragment {
+                text: "YOU ATE EVERYTHING!".to_string(),
+                scale: Some(PxScale::from(48.0)),
+                color: Some(Color::WHITE),
+                ..Default::default()
+            });
+
+            // Compute centered X
+            let text_width = msg.measure(ctx)?.x;
+            let x = (800.0 - text_width) * 0.5;
+
+            // Fixed bottom position (padding 20 px)
+            let y = 600.0 - 20.0 - msg.measure(ctx)?.y;
+
+            canvas.draw(&msg, Vec2::new(x, y));
+        }
+
         // --------------------------------
         // Draw all bodies
         // --------------------------------
@@ -209,7 +231,7 @@ impl event::EventHandler for GameState {
         // UI - Player Mass + Goal
         // --------------------------------
 
-        let mut mass_text = Text::new(TextFragment {
+        let mass_text = Text::new(TextFragment {
             text: format!("Mass: {:.2}", player.mass),
             scale: Some(PxScale::from(24.0)), // font size
             color: Some(Color::WHITE),
