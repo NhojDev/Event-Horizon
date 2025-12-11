@@ -22,7 +22,7 @@ apt install libasound2-dev libudev-dev pkg-config
 ```
 
 ## Issues Encountered during Development
-- **Using the Particular Crate**  
+- **Online Resources**  
   Finding online resources for all the different game engines using Rust proved to be somewhat difficult. Most documentation for certain game engines were already outdated due to the constant updates that each game engine went through. Using GGEZ was fairly easy though.
 
 - **Using the Particular Crate**  
